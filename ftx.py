@@ -195,7 +195,16 @@ uprate = float(sys.argv[6])
 fc = FtxClient(apiKey, secretKey)
 
 def get_max_order_price(orders):
-    return max(list(map(lambda x: x['price'], orders)))
+    sides = list(map(lambada x : x['side'], orders))
+    prices = list(map(lambda x: x['price'], orders))
+    p = zip(sides, prices)
+    max_order_price = 0.0
+    for i in p:
+        if(i[0] == 'buy' && i[1] > max_order_price)
+            max_order_price = i[1]
+    return max_order_price
+            
+            
 
 def run(coin, number, rate, uprate):
     while True:
