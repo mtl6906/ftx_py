@@ -200,7 +200,7 @@ def get_max_order_price(orders):
     p = zip(sides, prices)
     max_order_price = 0.0
     for i in p:
-        if(i[0] == 'buy' and i[1] > max_order_price)
+        if(i[0] == 'buy' and i[1] > max_order_price):
             max_order_price = i[1]
     return max_order_price
             
