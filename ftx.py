@@ -204,17 +204,22 @@ def get_max_order_price(orders):
             max_order_price = i[1]
     return max_order_price
             
-            
-
+def get_buy_orders(orders):
+    buy_orders = []
+    for order in orders:
+        if(order['side'] == 'buy'):
+            buy_orders.append(order)
+    return buy_orders
 def run(coin, number, rate, uprate):
     while True:
         time.sleep(2)
         try:
             prices = fc.get_prices(coin)
             open_orders = fc.get_open_orders(coin)
+            buy_orders = get_buy_orders(open_orders)
         except Exception:
             continue
-        if(len(open_orders) == 0):
+        if(len(buy_orders) == 0):
             try:
                 fc.place_order(coin, "sell", prices['bids'][0][0], number, "limit", False, False, False)
             except Exception:
@@ -227,7 +232,7 @@ def run(coin, number, rate, uprate):
                     continue
                 break
         else:
-            if(len(open_orders) >= 5):
+            if(len(buy_orders) >= 5):
                 continue
             current_price = prices['bids'][0][0]
             sign_price = get_max_order_price(open_orders) * (1 + uprate)
