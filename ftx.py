@@ -194,29 +194,40 @@ uprate = float(sys.argv[6])
 
 fc = FtxClient(apiKey, secretKey)
 
-def get_max_order_price(orders):
+def get_max_order_price(orders, side):
     sides = list(map(lambda x : x['side'], orders))
     prices = list(map(lambda x: x['price'], orders))
     p = zip(sides, prices)
     max_order_price = 0.0
     for i in p:
-        if(i[0] == 'buy' and i[1] > max_order_price):
+        if(i[0] == side and i[1] > max_order_price):
             max_order_price = i[1]
     return max_order_price
             
-def get_buy_orders(orders):
-    buy_orders = []
+def get_min_order_price(orders, side):
+    sides = list(map(lambda x : x['side'], orders))
+    prices = list(map(lambda x : x['price'], orders))
+    p = zip(sides, prices)
+    min_order_price = 999999
+    for i in p:
+        if(i[0] == side and i[1] < min_order_price):
+            min_order_price = i[1]
+    return min_order_price
+
+def get_orders_of_side(orders, side):
+    orders_of_side = []
     for order in orders:
-        if(order['side'] == 'buy'):
-            buy_orders.append(order)
-    return buy_orders
-def run(coin, number, rate, uprate):
+        if(order['side'] == side):
+            orders_of_side.append(order)
+    return orders_of_side
+
+def run_sell(coin, number, rate, uprate):
     while True:
         time.sleep(2)
         try:
             prices = fc.get_prices(coin)
             open_orders = fc.get_open_orders(coin)
-            buy_orders = get_buy_orders(open_orders)
+            buy_orders = get_orders_of_side(open_orders, 'buy')
         except Exception:
             continue
         if(len(buy_orders) == 0):
@@ -235,7 +246,7 @@ def run(coin, number, rate, uprate):
             if(len(buy_orders) >= 5):
                 continue
             current_price = prices['bids'][0][0]
-            sign_price = get_max_order_price(open_orders) * (1 + uprate)
+            sign_price = get_max_order_price(open_orders, 'buy') * (1 + uprate)
             if(current_price > sign_price):
                 try:
                     fc.place_order(coin, "sell", current_price, number, "limit", False, False, False)
@@ -249,5 +260,42 @@ def run(coin, number, rate, uprate):
                         continue;
                     break
                     
-
+def run_buy(coin, number, rate, uprate):
+    while True:
+        time.sleep(2)
+        try:
+            prices = fc.get_prices(coin)
+            open_orders = fc.get_open_orders(coin)
+            sell_orders = get_orders_of_side(open_orders, 'sell')
+        except Exception:
+            continue
+        if(len(sell_orders) == 0):
+            try:
+                fc.palce_order(coin, "buy", prices['asks'][0][0], number, "limit", False, False, False)
+            except Exception:
+                continue
+            while True:
+                try:
+                    fc.place_order(coin, "sell", prices['asks'][0][0] * (1 + rate), number, "limit", False, False, False)
+                except Exception:
+                    time.sleep(1)
+                    continue
+                break
+        else:
+            if(len(sell_orders) >= 5):
+                continue
+            current_price = prices['asks'][0][0]
+            sign_price = get_min_order_price(open_orders, 'sell') * (1 - uprate)
+            if(current_price < sign_price):
+                try:
+                    fc.place_order(coin, 'buy', current_price, number, 'limit', False, False, False)
+                except Exception:
+                    continue
+                while True:
+                    try:
+                        fc.place_order(coin, 'sell', current_price * (1 + rate), number, 'limit', False, False, False)
+                    except Exception:
+                        time.sleep(1)
+                        continue
+                    break
 run(coin, number, rate, uprate)
